@@ -1,13 +1,18 @@
-import requests
-import time
-import json
+
 from flask import Flask, render_template_string
-from threading import Thread
+import requests
+import json
 import os
+import threading
+import time
 
 app = Flask(__name__)
 
-SERVIDORES = {
+DATA_FILE = "data.json"
+CHECK_INTERVAL = 300  # 5 minutos
+
+# Lista de servidores
+servers = {
     "ZEUS": {
         "Ztcentral": "http://ztcentral.top:80",
         "AplusHM": "http://aplushm.top",
@@ -44,146 +49,98 @@ SERVIDORES = {
     }
 }
 
-DATA_FILE = "data.json"
-
-def verificar_servidores():
-    try:
+# Inicializa os dados
+def load_data():
+    if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
-            data = json.load(f)
-    except:
-        data = {}
+            return json.load(f)
+    return {}
 
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f)
+
+def check_servers():
+    data = load_data()
     while True:
-        for grupo, servidores in SERVIDORES.items():
-            for nome, url in servidores.items():
-                if nome not in data:
-                    data[nome] = {"uptime_horas": 0, "status": False, "group": grupo}
+        for group, srvrs in servers.items():
+            for name, url in srvrs.items():
                 try:
-                    response = requests.get(url, timeout=5, verify=False)
-                    if response.status_code == 200:
-                        data[nome]["uptime_horas"] += round(5 / 3600, 4)
-                        data[nome]["status"] = True
-                    else:
-                        data[nome]["status"] = False
+                    response = requests.get(url, timeout=5)
+                    online = response.status_code == 200
                 except:
-                    data[nome]["status"] = False
-
-        with open(DATA_FILE, "w") as f:
-            json.dump(data, f)
-
-        time.sleep(300)
+                    online = False
+                if name not in data:
+                    data[name] = {
+                        "uptime_horas": 0,
+                        "status": online,
+                        "group": group
+                    }
+                if online:
+                    data[name]["uptime_horas"] += CHECK_INTERVAL / 3600
+                    data[name]["status"] = True
+                else:
+                    data[name]["status"] = False
+        save_data(data)
+        time.sleep(CHECK_INTERVAL)
 
 @app.route("/")
 def index():
-    try:
-        with open(DATA_FILE, "r") as f:
-            data = json.load(f)
-    except:
-        data = {}
-
+    data = load_data()
     ranking = [
-        {"nome": nome, "group": info["group"], "uptime_horas": round(info["uptime_horas"], 2), "status": info["status"]}
-        for nome, info in data.items()
+        {
+            "name": name,
+            "group": info["group"],
+            "uptime_horas": round(info["uptime_horas"], 2),
+            "status": info["status"]
+        }
+        for name, info in data.items()
     ]
-
     top5 = sorted(ranking, key=lambda x: x["uptime_horas"], reverse=True)[:5]
-
-    html = """
+    html = '''
     <html>
     <head>
         <title>Monitor de DNS - Uptime</title>
         <style>
-            body {
-                font-family: Arial;
-                background-color: #1e1e1e;
-                color: white;
-                margin: 0;
-                padding: 0;
-            }
-            h2 {
-                text-align: center;
-                color: lime;
-                padding-top: 20px;
-            }
-            .top5 {
-                position: fixed;
+            body { font-family: Arial; background-color: #111; color: white; }
+            table { width: 90%; margin: auto; border-collapse: collapse; }
+            th, td { padding: 10px; text-align: center; border-bottom: 1px solid #444; }
+            th { background-color: #222; }
+            .status-on { color: lime; }
+            .status-off { color: red; }
+            .top5-box {
+                position: absolute;
                 top: 10px;
                 left: 10px;
-                background-color: #111;
                 padding: 10px;
-                border: 1px solid lime;
-                border-radius: 8px;
-            }
-            .top5 h3 {
-                margin-top: 0;
-                color: lime;
-            }
-            table {
-                width: 90%;
-                margin: 80px auto 20px auto;
-                border-collapse: collapse;
-            }
-            th, td {
-                border: 1px solid #444;
-                padding: 10px;
-                text-align: center;
-            }
-            th {
-                background-color: #333;
-            }
-            .status-ok {
-                color: lime;
-            }
-            .status-fail {
-                color: red;
-            }
-            .footer {
-                text-align: center;
-                font-size: 12px;
-                color: #aaa;
-                margin-bottom: 10px;
+                border: 2px solid limegreen;
+                border-radius: 10px;
+                background-color: #000;
+                font-weight: bold;
             }
         </style>
     </head>
     <body>
-        <div class="top5">
-            <h3>🌐 Top 5 Uptime</h3>
-            <ul>
-                """ + "".join([f"<li>{srv['nome']}</li>" for srv in top5]) + """
-            </ul>
+        <div class="top5-box">
+            🌐 Top 5 Uptime<br>
+            ''' + "<br>".join([s["name"] for s in top5]) + '''
         </div>
-        <h2>📊 Todos os Servidores</h2>
+        <h2 style="text-align:center; color:lime;">📊 Todos os Servidores</h2>
         <table>
-            <tr>
-                <th>Servidor</th>
-                <th>Grupo</th>
-                <th>Uptime (horas)</th>
-                <th>Status</th>
-            </tr>
-    """
-
-    for srv in ranking:
-        html += f"""
-        <tr>
-            <td>{srv['nome']}</td>
-            <td>{srv['group']}</td>
-            <td>{srv['uptime_horas']}</td>
-            <td class="{ 'status-ok' if srv['status'] else 'status-fail' }">
-                {"🟢" if srv['status'] else "🔴"}
-            </td>
-        </tr>
-        """
-
-    html += """
+            <tr><th>Servidor</th><th>Grupo</th><th>Uptime (horas)</th><th>Status</th></tr>
+    '''
+    for s in ranking:
+        status_icon = "🟢" if s["status"] else "🔴"
+        html += f"<tr><td>{s['name']}</td><td>{s['group']}</td><td>{s['uptime_horas']}</td><td>{status_icon}</td></tr>"
+    html += '''
         </table>
-        <div class="footer">
-            Atualizado automaticamente a cada 5 minutos.
-        </div>
-    </body>
-    </html>
-    """
+        <p style="text-align:center; color:gray;">Atualizado automaticamente a cada 5 minutos.</p>
+    </body></html>
+    '''
     return render_template_string(html)
 
 if __name__ == "__main__":
-    Thread(target=verificar_servidores, daemon=True).start()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    t = threading.Thread(target=check_servers)
+    t.daemon = True
+    t.start()
+    app.run(host="0.0.0.0", port=10000)

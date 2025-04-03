@@ -1,67 +1,97 @@
+
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Monitor de DNS - Uptime</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #0d1117;
-            color: #c9d1d9;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #58a6ff;
-        }
-        .top5 {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color: #161b22;
-            padding: 15px;
-            border: 2px solid #58a6ff;
-            border-radius: 8px;
-            width: 200px;
-        }
-        .top5 h2 {
-            margin-top: 0;
-            color: #3fb950;
-        }
-        .server-list {
-            margin-left: 240px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .card {
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 15px;
-            width: 200px;
-            box-shadow: 0 0 10px #00000055;
-        }
-        .card h3 {
-            margin-top: 0;
-        }
-        .status-online {
-            color: #3fb950;
-        }
-        .status-offline {
-            color: #f85149;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monitor de DNS</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+    h1 { color: #2c3e50; }
+    .description { margin-bottom: 20px; color: #555; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #2c3e50; color: white; }
+    .online { color: green; font-weight: bold; }
+    .offline { color: red; font-weight: bold; }
+    .group-title { margin-top: 40px; font-size: 1.5em; color: #34495e; }
+    .ranking-box { background: #fff; padding: 15px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .ranking-box h2 { margin: 0 0 10px 0; color: #2c3e50; }
+    .ranking-box ol { padding-left: 20px; }
+  </style>
 </head>
 <body>
-    <div class="top5">
-        <h2>🏆 TOP 5</h2>
-        {{ top5_html | safe }}
-    </div>
-    <h1>🌐 Monitoramento de Servidores DNS</h1>
-    <div class="server-list">
-        {{ all_html | safe }}
-    </div>
+  <h1>Monitor de DNS</h1>
+  <p class="description">Monitoramento por grupo de servidores com status em tempo real.</p>
+
+  <div class="ranking-box">
+    <h2>🏆 Top 5 Servidores com Maior Uptime</h2>
+    <ol id="top-ranking">
+      <li>Carregando...</li>
+    </ol>
+  </div>
+
+  <div id="dns-content">Carregando dados...</div>
+
+  <script>
+    async function carregarStatusDNS() {
+      try {
+        const response = await fetch("/api/status");
+        const { status, top5 } = await response.json();
+
+        // Atualizar o ranking top 5
+        const topContainer = document.getElementById("top-ranking");
+        topContainer.innerHTML = "";
+        top5.forEach((entry, i) => {
+          const li = document.createElement("li");
+          li.textContent = `${entry.name} [${entry.group}] - ${entry.uptime}%`;
+          topContainer.appendChild(li);
+        });
+
+        // Atualizar as tabelas de grupos
+        const container = document.getElementById("dns-content");
+        container.innerHTML = "";
+        for (const [grupo, servidores] of Object.entries(status)) {
+          const title = document.createElement("h2");
+          title.className = "group-title";
+          title.textContent = grupo;
+          container.appendChild(title);
+
+          const table = document.createElement("table");
+          table.innerHTML = `
+            <thead>
+              <tr>
+                <th>Nome da DNS</th>
+                <th>Endereço</th>
+                <th>Status</th>
+                <th>Uptime</th>
+                <th>Falhas</th>
+                <th>Última Verificação</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.entries(servidores).map(([nome, info]) => `
+                <tr>
+                  <td>${nome}</td>
+                  <td>${info.url}</td>
+                  <td class="${info.status === 'Online' ? 'online' : 'offline'}">${info.status}</td>
+                  <td>${info.uptime}%</td>
+                  <td>${info.failures}</td>
+                  <td>${info.last_check}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          `;
+          container.appendChild(table);
+        }
+      } catch (error) {
+        document.getElementById("dns-content").innerHTML = "Erro ao carregar os dados.";
+        console.error("Erro ao carregar status das DNS:", error);
+      }
+    }
+
+    carregarStatusDNS();
+    setInterval(carregarStatusDNS, 30000);
+  </script>
 </body>
 </html>

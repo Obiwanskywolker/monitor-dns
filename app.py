@@ -1,3 +1,4 @@
+
 from flask import Flask, jsonify, render_template
 import requests
 import threading
@@ -6,7 +7,6 @@ import os
 
 app = Flask(__name__)
 
-# Dados das DNS
 DNS_LIST = [
     {"grupo": "BLAZE", "nome": "CDN Trek", "endereco": "http://cdntrek.xyz:80"},
     {"grupo": "BLAZE", "nome": "Natkcz", "endereco": "http://natkcz.xyz:80"},
@@ -31,11 +31,20 @@ def verificar_dns():
         for dns in DNS_LIST:
             try:
                 response = requests.get(dns["endereco"], timeout=10)
-                status_dns[dns["nome"]] = {"status": "Online", "codigo": response.status_code, "grupo": dns["grupo"]}
+                status_dns[dns["nome"]] = {
+                    "status": "Online",
+                    "codigo": response.status_code,
+                    "grupo": dns["grupo"],
+                    "ultima_verificacao": time.strftime('%Y-%m-%d %H:%M:%S')
+                }
             except requests.RequestException:
-                status_dns[dns["nome"]] = {"status": "Offline", "codigo": None, "grupo": dns["grupo"]}
-
-        time.sleep(300)  # Verifica a cada 5 minutos
+                status_dns[dns["nome"]] = {
+                    "status": "Offline",
+                    "codigo": None,
+                    "grupo": dns["grupo"],
+                    "ultima_verificacao": time.strftime('%Y-%m-%d %H:%M:%S')
+                }
+        time.sleep(300)
 
 @app.route('/api/status')
 def api_status():
@@ -45,10 +54,8 @@ def api_status():
 def index():
     return render_template('index.html', dns_list=DNS_LIST, status_dns=status_dns)
 
-# Inicialização da thread de verificação
 threading.Thread(target=verificar_dns, daemon=True).start()
 
-# Configuração para Railway
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)

@@ -1,96 +1,57 @@
-
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Monitor de DNS</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>🔝 Top 5 Uptime</title>
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f4f9fc; padding: 20px; }
-    h1 { color: #0d6efd; }
-    .description { margin-bottom: 20px; color: #555; }
-    .group-title { margin-top: 40px; font-size: 1.5em; color: #0d6efd; }
-    .ranking-box { background: #fff; padding: 20px; margin-bottom: 30px; border-left: 5px solid #0d6efd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .ranking-box h2 { margin: 0 0 10px 0; color: #0d6efd; }
-    .status-online { color: green; font-weight: bold; }
-    .status-offline { color: red; font-weight: bold; }
-    .status-desconhecido { color: gray; font-weight: bold; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background-color: #fff; }
-    th, td { padding: 12px; border-bottom: 1px solid #ccc; }
-    th { background-color: #0d6efd; color: white; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #0e1c2e;
+      color: #ffffff;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    table {
+      width: 80%;
+      margin: auto;
+      border-collapse: collapse;
+      margin-top: 30px;
+    }
+    th, td {
+      padding: 14px;
+      border-bottom: 1px solid #555;
+    }
+    tr:hover {
+      background-color: #1d2b3a;
+    }
+    th {
+      background-color: #1a73e8;
+    }
   </style>
 </head>
 <body>
-  <h1>📡 Monitor de DNS</h1>
-  <p class="description">Monitoramento em tempo real por grupo de servidores com visual moderno.</p>
-
-  <div class="ranking-box">
-    <h2>🏆 Top 5 Servidores com Maior Uptime</h2>
-    <ol id="top-ranking"><li>Carregando...</li></ol>
-  </div>
-
-  <div id="dns-content">Carregando dados...</div>
-
-  <script>
-    async function carregarStatusDNS() {
-      try {
-        const response = await fetch("/api/status");
-        const { status, top5 } = await response.json();
-
-        const topContainer = document.getElementById("top-ranking");
-        topContainer.innerHTML = "";
-        top5.forEach((entry, i) => {
-          const li = document.createElement("li");
-          li.innerHTML = `<strong>${entry.name}</strong> <span class="badge text-bg-primary ms-2">${entry.group}</span> - ${entry.uptime}%`;
-          topContainer.appendChild(li);
-        });
-
-        const container = document.getElementById("dns-content");
-        container.innerHTML = "";
-        for (const [grupo, servidores] of Object.entries(status)) {
-          const title = document.createElement("h2");
-          title.className = "group-title";
-          title.textContent = grupo;
-          container.appendChild(title);
-
-          const table = document.createElement("table");
-          table.innerHTML = `
-            <thead>
-              <tr>
-                <th>Nome da DNS</th>
-                <th>Endereço</th>
-                <th>Status</th>
-                <th>Uptime (%)</th>
-                <th>Uptime (horas)</th>
-                <th>Falhas</th>
-                <th>Última Verificação</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${Object.entries(servidores).map(([nome, info]) => `
-                <tr>
-                  <td>${nome}</td>
-                  <td>${info.url}</td>
-                  <td class="status-${info.status.toLowerCase()}">${info.status}</td>
-                  <td>${info.uptime}%</td>
-                  <td>${Math.floor(info.uptime_seconds / 3600)}h</td>
-                  <td>${info.failures}</td>
-                  <td>${info.last_check}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          `;
-          container.appendChild(table);
-        }
-      } catch (error) {
-        document.getElementById("dns-content").innerHTML = "Erro ao carregar os dados.";
-        console.error("Erro ao carregar status das DNS:", error);
-      }
-    }
-
-    carregarStatusDNS();
-    setInterval(carregarStatusDNS, 30000);
-  </script>
+  <h1>🔝 Top 5 Servidores por Uptime</h1>
+  <table>
+    <tr>
+      <th>Grupo</th>
+      <th>Servidor</th>
+      <th>Status</th>
+      <th>Uptime (%)</th>
+      <th>Horas Online</th>
+    </tr>
+    {% for server in top5 %}
+    <tr>
+      <td>{{ server.group }}</td>
+      <td>{{ server.name }}</td>
+      <td>{{ server.status }}</td>
+      <td>{{ server.uptime }}%</td>
+      <td>{{ server.horas }}h</td>
+    </tr>
+    {% endfor %}
+  </table>
 </body>
 </html>

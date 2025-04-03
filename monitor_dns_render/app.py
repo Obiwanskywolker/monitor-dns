@@ -6,9 +6,76 @@ from flask import Flask, jsonify, send_from_directory, request, redirect, render
 
 app = Flask(__name__)
 
-# ... (resto do dicionário "servers" e "status_data" igual ao anterior)
+servers = {
+    "ZEUS": [
+        {"name": "ztcentral", "url": "http://ztcentral.top:80"},
+        {"name": "aplushm", "url": "http://aplushm.top"},
+        {"name": "strmg", "url": "http://strmg.top"},
+        {"name": "newxczs", "url": "http://newxczs.top"},
+    ],
+    "CLUB": [
+        {"name": "afs4zer", "url": "http://afs4zer.vip:80"}
+    ],
+    "UNIPLAY": [
+        {"name": "ztuni", "url": "http://ztuni.top:80"},
+        {"name": "testezeiro", "url": "http://testezeiro.com:80"}
+    ],
+    "POWERPLAY": [
+        {"name": "techon", "url": "http://techon.one:80"}
+    ],
+    "P2CINE": [
+        {"name": "tuptu1", "url": "https://tuptu1.live:80"},
+        {"name": "tyuo22", "url": "https://tyuo22.club:80"},
+        {"name": "ab22", "url": "https://ab22.store:80"}
+    ],
+    "LIVE21": [
+        {"name": "tojole", "url": "http://tojole.net:80"}
+    ],
+    "BXPLAY": [
+        {"name": "bxplux", "url": "http://bxplux.top:80"}
+    ],
+    "ELITE": [
+        {"name": "bandnews", "url": "http://bandnews.asia:80"}
+    ],
+    "BLAZE": [
+        {"name": "cdntrek", "url": "http://cdntrek.xyz:80"},
+        {"name": "natkcz", "url": "http://natkcz.xyz:80"}
+    ]
+}
 
-# Funções auxiliares mantidas...
+status_data = {
+    group: {
+        dns["name"]: {
+            "url": dns["url"],
+            "status": "Desconhecido",
+            "uptime": 100.0,
+            "failures": 0,
+            "last_check": "-"
+        } for dns in dns_list
+    } for group, dns_list in servers.items()
+}
+
+def check_dns():
+    while True:
+        for group, dns_list in servers.items():
+            for dns in dns_list:
+                name = dns["name"]
+                url = dns["url"]
+                try:
+                    parsed = urlparse(url)
+                    host = parsed.hostname
+                    port = parsed.port or (443 if parsed.scheme == 'https' else 80)
+                    with socket.create_connection((host, port), timeout=5):
+                        status_data[group][name]["status"] = "Online"
+                except:
+                    status_data[group][name]["status"] = "Offline"
+                    status_data[group][name]["failures"] += 1
+
+                status_data[group][name]["last_check"] = time.strftime("%d/%m %H:%M:%S")
+                total = status_data[group][name]["failures"] + 1
+                online = 1 if status_data[group][name]["status"] == "Online" else 0
+                status_data[group][name]["uptime"] = round((online / total) * 100, 2)
+        time.sleep(1800)  # 30 minutos
 
 @app.route('/')
 def index():

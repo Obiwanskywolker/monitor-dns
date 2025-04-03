@@ -1,100 +1,129 @@
-import time
+from flask import Flask
+from markupsafe import Markup
 import requests
-from flask import Flask, Markup
+import time
+from flask import render_template_string
 
 app = Flask(__name__)
-start_times = {}
 
-SERVERS = {
+servers = {
     "ZEUS": {
         "Ztcentral": "http://ztcentral.top:80",
         "AplusHM": "http://aplushm.top",
         "Strmg": "http://strmg.top",
-        "Newxczs": "http://newxczs.top"
+        "Newxczs": "http://newxczs.top",
     },
     "CLUB": {
-        "AFS4Zer": "http://afs4zer.vip:80"
+        "AFS4Zer": "http://afs4zer.vip:80",
     },
     "UNIPLAY": {
         "Ztuni": "http://ztuni.top:80",
-        "Testezeiro": "http://testezeiro.com:80"
+        "Testezeiro": "http://testezeiro.com:80",
     },
     "POWERPLAY": {
-        "Techon": "http://techon.one:80"
+        "Techon": "http://techon.one:80",
     },
     "P2CINE": {
         "Tuptu1": "https://tuptu1.live",
         "Tyuo22": "https://tyuo22.club",
-        "AB22": "https://ab22.store"
+        "AB22": "https://ab22.store",
     },
     "LIVE21": {
-        "Tojole": "http://tojole.net:80"
+        "Tojole": "http://tojole.net:80",
     },
     "BXPLAY": {
-        "BXPLux": "http://bxplux.top:80"
+        "BXPLux": "http://bxplux.top:80",
     },
     "ELITE": {
-        "BandNews": "http://bandnews.asia:80"
+        "BandNews": "http://bandnews.asia:80",
     },
     "BLAZE": {
         "CDN Trek": "http://cdntrek.xyz:80",
-        "Natkcz": "http://natkcz.xyz:80"
+        "Natkcz": "http://natkcz.xyz:80",
     }
 }
 
-def check_status(name, url):
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            if name not in start_times:
-                start_times[name] = time.time()
-            uptime = round((time.time() - start_times[name]) / 3600, 2)
-            return uptime, "✅"
-        else:
-            start_times.pop(name, None)
-            return 0, "❌"
-    except:
-        start_times.pop(name, None)
-        return 0, "❌"
+status_data = {}
 
-@app.route("/")
-def home():
-    ranking = []
-    for group, servers in SERVERS.items():
-        for name, url in servers.items():
-            uptime, status = check_status(name, url)
-            ranking.append({
-                "group": group,
-                "name": name,
-                "url": url,
-                "uptime_horas": uptime,
-                "status": status
-            })
-
-    top5 = sorted(ranking, key=lambda x: x["uptime_horas"], reverse=True)[:5]
-
+@app.route('/')
+def monitor():
     html = """
+    <!DOCTYPE html>
     <html>
     <head>
-    <title>Monitor de DNS - Uptime</title>
-    <style>
-    body { font-family: Arial; background-color: #121212; color: #ffffff; text-align: center; }
-    table { width: 80%%; margin: auto; border-collapse: collapse; }
-    th, td { border: 1px solid #444; padding: 10px; }
-    th { background-color: #333; }
-    h1 { color: #4CAF50; }
-    </style>
+        <title>Monitor de DNS - Uptime</title>
+        <style>
+            body {
+                font-family: Arial;
+                background-color: #1e1e1e;
+                color: white;
+                text-align: center;
+            }
+            h1 { color: #00ff99; }
+            table {
+                margin: auto;
+                border-collapse: collapse;
+                width: 80%;
+            }
+            th, td {
+                padding: 10px;
+                border: 1px solid #444;
+            }
+            th {
+                background-color: #333;
+            }
+            tr:nth-child(even) {
+                background-color: #2c2c2c;
+            }
+        </style>
     </head>
     <body>
-    <h1>📊 TOP 5 Servidores por Uptime</h1>
-    <table>
-    <tr><th>Servidor</th><th>Grupo</th><th>Uptime (h)</th><th>Status</th></tr>
+        <h1>🌐 Top 5 Servidores por Uptime</h1>
+        <table>
+            <tr><th>Servidor</th><th>Grupo</th><th>Uptime (horas)</th><th>Status</th></tr>
     """
-    for server in top5:
-        html += f"<tr><td>{server['name']}</td><td>{server['group']}</td><td>{server['uptime_horas']}</td><td>{server['status']}</td></tr>"
 
-    html += "</table></body></html>"
-    return Markup(html)
+    ranking = []
+    for group, dns_list in servers.items():
+        for name, url in dns_list.items():
+            if name not in status_data:
+                status_data[name] = {
+                    "group": group,
+                    "url": url,
+                    "status": True,
+                    "start_time": time.time()
+                }
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+            try:
+                response = requests.get(url, timeout=3)
+                online = response.status_code == 200
+            except:
+                online = False
+
+            if not online:
+                status_data[name]["status"] = False
+                status_data[name]["start_time"] = time.time()
+            else:
+                status_data[name]["status"] = True
+
+            uptime = (time.time() - status_data[name]["start_time"]) / 3600
+            ranking.append({
+                "name": name,
+                "group": group,
+                "uptime": round(uptime, 2),
+                "status": "🟢" if status_data[name]["status"] else "🔴"
+            })
+
+    top5 = sorted(ranking, key=lambda x: x['uptime'], reverse=True)[:5]
+
+    for item in top5:
+        html += f"<tr><td>{item['name']}</td><td>{item['group']}</td><td>{item['uptime']}</td><td>{item['status']}</td></tr>"
+
+    html += """
+        </table>
+        <p style='margin-top:20px; color: gray;'>Atualizado automaticamente a cada 5 minutos.</p>
+    </body>
+    </html>
+    """
+
+    return render_template_string(Markup(html))

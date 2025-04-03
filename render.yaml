@@ -3,7 +3,6 @@ services:
   - type: web
     name: monitor-dns
     env: python
-    buildCommand: ""
-    startCommand: "python app.py"
     plan: free
-    region: oregon
+    buildCommand: ""
+    startCommand: "gunicorn app:app"

@@ -1,4 +1,3 @@
-
 import requests
 import time
 import socket
@@ -14,30 +13,20 @@ servers = {
         {"name": "Strmg", "url": "http://strmg.top"},
         {"name": "Newxczs", "url": "http://newxczs.top"}
     ],
-    "CLUB": [
-        {"name": "AFS4Zer", "url": "http://afs4zer.vip:80"}
-    ],
+    "CLUB": [{"name": "AFS4Zer", "url": "http://afs4zer.vip:80"}],
     "UNIPLAY": [
         {"name": "Ztuni", "url": "http://ztuni.top:80"},
         {"name": "Testezeiro", "url": "http://testezeiro.com:80"}
     ],
-    "POWERPLAY": [
-        {"name": "Techon", "url": "http://techon.one:80"}
-    ],
+    "POWERPLAY": [{"name": "Techon", "url": "http://techon.one:80"}],
     "P2CINE": [
         {"name": "Tuptu1", "url": "https://tuptu1.live"},
         {"name": "Tyuo22", "url": "https://tyuo22.club"},
         {"name": "AB22", "url": "https://ab22.store"}
     ],
-    "LIVE21": [
-        {"name": "Tojole", "url": "http://tojole.net:80"}
-    ],
-    "BXPLAY": [
-        {"name": "BXPLux", "url": "http://bxplux.top:80"}
-    ],
-    "ELITE": [
-        {"name": "BandNews", "url": "http://bandnews.asia:80"}
-    ],
+    "LIVE21": [{"name": "Tojole", "url": "http://tojole.net:80"}],
+    "BXPLAY": [{"name": "BXPLux", "url": "http://bxplux.top:80"}],
+    "ELITE": [{"name": "BandNews", "url": "http://bandnews.asia:80"}],
     "BLAZE": [
         {"name": "CDN Trek", "url": "http://cdntrek.xyz:80"},
         {"name": "Natkcz", "url": "http://natkcz.xyz:80"}
@@ -63,15 +52,18 @@ def is_port_open(host, port):
 def check_dns():
     headers = {'User-Agent': 'Mozilla/5.0'}
     while True:
+        print("Iniciando verificação de DNS...")
         for group, dns_list in servers.items():
             for dns in dns_list:
                 name, url = dns['name'], dns['url']
+                print(f"Verificando {name} - {url}")
                 try:
                     response = requests.get(url, timeout=10, allow_redirects=True, headers=headers)
                     online = response.status_code == 200
-                except:
+                except Exception as e:
                     parsed = urlparse(url)
                     host, port = parsed.hostname, parsed.port or (443 if parsed.scheme == 'https' else 80)
+                    print(f"Falha na requisição HTTP. Testando porta: {host}:{port}")
                     online = is_port_open(host, port)
 
                 status_data[group][name]['status'] = 'Online' if online else 'Offline'
@@ -83,8 +75,9 @@ def check_dns():
                 status_data[group][name]['uptime'] = round(uptime, 1)
                 status_data[group][name]['uptime_days'] = round((uptime / 100) * (total_checks * 5) / 1440, 2)
                 status_data[group][name]['last_check'] = time.strftime('%d/%m/%Y %H:%M')
-
-        time.sleep(300)
+        print("Verificação concluída. Aguardando próxima rodada...
+")
+        time.sleep(10)
 
 @app.route('/')
 def index():

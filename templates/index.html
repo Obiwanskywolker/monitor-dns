@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Status dos DNS</title>
+</head>
+<body>
+  <h1>Status dos DNS Monitorados</h1>
+  <table border="1">
+    <tr>
+      <th>Nome da DNS</th>
+      <th>Endereço</th>
+      <th>Status</th>
+      <th>Uptime</th>
+    </tr>
+    {% for item in status_list %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td><a href="{{ item.url }}">{{ item.url }}</a></td>
+      <td>{{ item.status }}</td>
+      <td>{{ item.uptime }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

@@ -1,61 +1,88 @@
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, render_template_string
 import requests
-import threading
 import time
-import os
 
 app = Flask(__name__)
 
 DNS_LIST = [
-    {"grupo": "BLAZE", "nome": "CDN Trek", "endereco": "http://cdntrek.xyz:80"},
-    {"grupo": "BLAZE", "nome": "Natkcz", "endereco": "http://natkcz.xyz:80"},
-    {"grupo": "BXPLAY", "nome": "BXPLux", "endereco": "http://bxplux.top:80"},
-    {"grupo": "CLUB", "nome": "AFS4Zer", "endereco": "http://afs4zer.vip:80"},
-    {"grupo": "ELITE", "nome": "BandNews", "endereco": "http://bandnews.asia:80"},
-    {"grupo": "LIVE21", "nome": "Tojole", "endereco": "http://tojole.net:80"},
-    {"grupo": "P2CINE", "nome": "Tuptu1", "endereco": "http://tuptu1.xyz:80"},
-    {"grupo": "POWERPLAY", "nome": "Techon", "endereco": "http://techon.one:80"},
-    {"grupo": "UNIPLAY", "nome": "Testezeiro", "endereco": "http://testezeiro.com:80"},
-    {"grupo": "UNIPLAY", "nome": "Ztuni", "endereco": "http://ztuni.top:80"},
-    {"grupo": "ZEUS", "nome": "AplusHM", "endereco": "http://aplushm.top:80"},
-    {"grupo": "ZEUS", "nome": "Newxczs", "endereco": "http://newxczs.top:80"},
-    {"grupo": "ZEUS", "nome": "Strmg", "endereco": "http://strmg.top:80"},
-    {"grupo": "ZEUS", "nome": "Ztcentral", "endereco": "http://ztcentral.top:80"},
+    {"name": "Tuptu1", "url": "http://tuptu1.xyz"},
+    {"name": "Techon", "url": "http://techon.one"},
+    {"name": "Testezeiro", "url": "http://testezeiro.com"},
+    {"name": "Ztuni", "url": "http://ztuni.top:80"},
+    {"name": "Aplushm", "url": "http://aplushm.top"},
+    {"name": "Newxczs", "url": "http://newxczs.top"},
+    {"name": "Strmg", "url": "http://strmg.top"},
+    {"name": "Ztcentral", "url": "http://ztcentral.top"}
 ]
 
-status_dns = {}
+last_check = {}
 
-def verificar_dns():
-    while True:
-        for dns in DNS_LIST:
-            try:
-                response = requests.get(dns["endereco"], timeout=10)
-                status_dns[dns["nome"]] = {
-                    "status": "Online",
-                    "codigo": response.status_code,
-                    "grupo": dns["grupo"],
-                    "ultima_verificacao": time.strftime('%Y-%m-%d %H:%M:%S')
-                }
-            except requests.RequestException:
-                status_dns[dns["nome"]] = {
-                    "status": "Offline",
-                    "codigo": None,
-                    "grupo": dns["grupo"],
-                    "ultima_verificacao": time.strftime('%Y-%m-%d %H:%M:%S')
-                }
-        time.sleep(300)
+def check_status():
+    for dns in DNS_LIST:
+        name = dns["name"]
+        url = dns["url"]
+        try:
+            start = time.time()
+            response = requests.get(url, timeout=5)
+            end = time.time()
+            status = "Online" if response.status_code == 200 else f"Erro {response.status_code}"
+            latency = round((end - start) * 1000)
+        except Exception as e:
+            status = "Offline"
+            latency = "-"
+        if name not in last_check:
+            last_check[name] = {
+                "status": status,
+                "latency": latency,
+                "last_online": time.time() if status == "Online" else None,
+                "uptime_days": 0
+            }
+        else:
+            if status == "Online":
+                if last_check[name]["last_online"]:
+                    elapsed = time.time() - last_check[name]["last_online"]
+                    last_check[name]["uptime_days"] = round(elapsed / 86400, 2)
+                else:
+                    last_check[name]["last_online"] = time.time()
+            last_check[name]["status"] = status
+            last_check[name]["latency"] = latency
 
-@app.route('/api/status')
-def api_status():
-    return jsonify(status_dns)
-
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html', dns_list=DNS_LIST, status_dns=status_dns)
-
-threading.Thread(target=verificar_dns, daemon=True).start()
-
-if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    check_status()
+    return render_template_string("""
+    <html>
+        <head>
+            <title>Status dos DNS</title>
+            <meta http-equiv="refresh" content="300">
+            <style>
+                body { font-family: Arial; background-color: #f2f2f2; padding: 20px; }
+                table { border-collapse: collapse; width: 100%; background: #fff; }
+                th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+                th { background-color: #4CAF50; color: white; }
+            </style>
+        </head>
+        <body>
+            <h2>Status dos Servidores DNS</h2>
+            <table>
+                <tr>
+                    <th>Nome da DNS</th>
+                    <th>Endereço</th>
+                    <th>Status</th>
+                    <th>Latência (ms)</th>
+                    <th>Uptime (dias)</th>
+                </tr>
+                {% for dns in dns_list %}
+                <tr>
+                    <td>{{ dns["name"] }}</td>
+                    <td>{{ dns["url"] }}</td>
+                    <td>{{ status[dns["name"]]["status"] }}</td>
+                    <td>{{ status[dns["name"]]["latency"] }}</td>
+                    <td>{{ status[dns["name"]]["uptime_days"] }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </body>
+    </html>
+    """, dns_list=DNS_LIST, status=last_check)

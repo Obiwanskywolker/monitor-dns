@@ -1,79 +1,55 @@
 
 from flask import Flask, render_template_string
-import socket
-from urllib.parse import urlparse
-import threading
-import time
+import requests
 
 app = Flask(__name__)
 
-servers = [
-    ("ZEUS", "Ztcentral", "http://ztcentral.top:80"),
-    ("ZEUS", "AplusHM", "http://aplushm.top"),
-    ("ZEUS", "Strmg", "http://strmg.top"),
-    ("ZEUS", "Newxczs", "http://newxczs.top"),
-    ("CLUB", "AFS4Zer", "http://afs4zer.vip:80"),
-    ("UNIPLAY", "Ztuni", "http://ztuni.top:80"),
-    ("UNIPLAY", "Testezeiro", "http://testezeiro.com:80"),
-    ("POWERPLAY", "Techon", "http://techon.one:80"),
-    ("P2CINE", "Tuptu1", "https://tuptu1.live"),
-    ("P2CINE", "Tyuo22", "https://tyuo22.club"),
-    ("P2CINE", "AB22", "https://ab22.store"),
-    ("LIVE21", "Tojole", "http://tojole.net:80"),
-    ("BXPLAY", "BXPLux", "http://bxplux.top:80"),
-    ("ELITE", "BandNews", "http://bandnews.asia:80"),
-    ("BLAZE", "CDN Trek", "http://cdntrek.xyz:80"),
-    ("BLAZE", "Natkcz", "http://natkcz.xyz:80"),
+SERVIDORES = [
+    {"nome": "Ztcentral", "grupo": "ZEUS", "url": "http://ztcentral.top:80"},
+    {"nome": "AplusHM", "grupo": "ZEUS", "url": "http://aplushm.top"},
+    {"nome": "Strmg", "grupo": "ZEUS", "url": "http://strmg.top"},
+    {"nome": "Newxczs", "grupo": "ZEUS", "url": "http://newxczs.top"},
+    {"nome": "AFS4Zer", "grupo": "CLUB", "url": "http://afs4zer.vip:80"},
+    {"nome": "Ztuni", "grupo": "UNIPLAY", "url": "http://ztuni.top:80"},
+    {"nome": "Testezeiro", "grupo": "UNIPLAY", "url": "http://testezeiro.com:80"},
+    {"nome": "Techon", "grupo": "POWERPLAY", "url": "http://techon.one:80"},
+    {"nome": "Tuptu1", "grupo": "P2CINE", "url": "https://tuptu1.live"},
+    {"nome": "Tyuo22", "grupo": "P2CINE", "url": "https://tyuo22.club"},
+    {"nome": "AB22", "grupo": "P2CINE", "url": "https://ab22.store"},
+    {"nome": "Tojole", "grupo": "LIVE21", "url": "http://tojole.net:80"},
+    {"nome": "BXPLux", "grupo": "BXPLAY", "url": "http://bxplux.top:80"},
+    {"nome": "BandNews", "grupo": "ELITE", "url": "http://bandnews.asia:80"},
+    {"nome": "CDN Trek", "grupo": "BLAZE", "url": "http://cdntrek.xyz:80"},
+    {"nome": "Natkcz", "grupo": "BLAZE", "url": "http://natkcz.xyz:80"},
 ]
-
-status_data = {}
-
-def check_server(name, url):
-    parsed = urlparse(url)
-    host = parsed.hostname
-    port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    try:
-        with socket.create_connection((host, port), timeout=5):
-            return "🟢 Online"
-    except Exception:
-        return "🔴 Offline"
-
-def update_status():
-    while True:
-        for group, name, url in servers:
-            status = check_server(name, url)
-            status_data[name] = {
-                "group": group,
-                "url": url,
-                "status": status,
-                "uptime": 100 if status == "🟢 Online" else 0
-            }
-        time.sleep(300)
-
-threading.Thread(target=update_status, daemon=True).start()
 
 @app.route("/")
 def index():
-    rows = ""
-    for name, data in status_data.items():
-        rows += f"<tr><td>{name}</td><td>{data['group']}</td><td>{data['uptime']}%</td><td>{data['status']}</td></tr>"
-    html = f'''
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Monitor de DNS</title>
-    </head>
-    <body>
-        <h2>🔎 Todos os Servidores</h2>
-        <table border="1" cellpadding="10">
-            <tr><th>Servidor</th><th>Grupo</th><th>Uptime</th><th>Status</th></tr>
-            {rows}
-        </table>
-        <p>Atualizado a cada 5 minutos</p>
-    </body>
-    </html>
+    resultados = []
+    for s in SERVIDORES:
+        try:
+            response = requests.head(s["url"], timeout=10, allow_redirects=True)
+            status_code = response.status_code
+            status = "🟢" if 200 <= status_code < 400 else "🔴"
+        except Exception as e:
+            status = "🔴"
+        resultados.append({
+            "nome": s["nome"],
+            "grupo": s["grupo"],
+            "url": s["url"],
+            "status": status
+        })
+
+    html = '''
+    <html><head><title>Status DNS</title></head><body>
+    <h2>🧪 Todos os Servidores DNS</h2>
+    <table border="1" cellpadding="8"><tr><th>Servidor</th><th>Grupo</th><th>Status</th></tr>
+    {% for r in resultados %}
+    <tr><td>{{ r.nome }}</td><td>{{ r.grupo }}</td><td>{{ r.status }}</td></tr>
+    {% endfor %}
+    </table></body></html>
     '''
-    return render_template_string(html)
+    return render_template_string(html, resultados=resultados)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)

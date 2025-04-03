@@ -5,51 +5,71 @@ import requests
 app = Flask(__name__)
 
 SERVIDORES = [
-    {"nome": "Ztcentral", "grupo": "ZEUS", "url": "http://ztcentral.top:80"},
-    {"nome": "AplusHM", "grupo": "ZEUS", "url": "http://aplushm.top"},
-    {"nome": "Strmg", "grupo": "ZEUS", "url": "http://strmg.top"},
-    {"nome": "Newxczs", "grupo": "ZEUS", "url": "http://newxczs.top"},
-    {"nome": "AFS4Zer", "grupo": "CLUB", "url": "http://afs4zer.vip:80"},
-    {"nome": "Ztuni", "grupo": "UNIPLAY", "url": "http://ztuni.top:80"},
-    {"nome": "Testezeiro", "grupo": "UNIPLAY", "url": "http://testezeiro.com:80"},
-    {"nome": "Techon", "grupo": "POWERPLAY", "url": "http://techon.one:80"},
-    {"nome": "Tuptu1", "grupo": "P2CINE", "url": "https://tuptu1.live"},
-    {"nome": "Tyuo22", "grupo": "P2CINE", "url": "https://tyuo22.club"},
-    {"nome": "AB22", "grupo": "P2CINE", "url": "https://ab22.store"},
-    {"nome": "Tojole", "grupo": "LIVE21", "url": "http://tojole.net:80"},
-    {"nome": "BXPLux", "grupo": "BXPLAY", "url": "http://bxplux.top:80"},
-    {"nome": "BandNews", "grupo": "ELITE", "url": "http://bandnews.asia:80"},
-    {"nome": "CDN Trek", "grupo": "BLAZE", "url": "http://cdntrek.xyz:80"},
-    {"nome": "Natkcz", "grupo": "BLAZE", "url": "http://natkcz.xyz:80"},
+    ("ZEUS", "Ztcentral", "http://ztcentral.top:80"),
+    ("ZEUS", "AplusHM", "http://aplushm.top"),
+    ("ZEUS", "Strmg", "http://strmg.top"),
+    ("ZEUS", "Newxczs", "http://newxczs.top"),
+    ("CLUB", "AFS4Zer", "http://afs4zer.vip:80"),
+    ("UNIPLAY", "Ztuni", "http://ztuni.top:80"),
+    ("UNIPLAY", "Testezeiro", "http://testezeiro.com:80"),
+    ("POWERPLAY", "Techon", "http://techon.one:80"),
+    ("P2CINE", "Tuptu1", "https://tuptu1.live"),
+    ("P2CINE", "Tyuo22", "https://tyuo22.club"),
+    ("P2CINE", "AB22", "https://ab22.store"),
+    ("LIVE21", "Tojole", "http://tojole.net:80"),
+    ("BXPLAY", "BXPLux", "http://bxplux.top:80"),
+    ("ELITE", "BandNews", "http://bandnews.asia:80"),
+    ("BLAZE", "CDN Trek", "http://cdntrek.xyz:80"),
+    ("BLAZE", "Natkcz", "http://natkcz.xyz:80"),
 ]
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
+
+def verificar_status(url):
+    try:
+        response = requests.head(url, headers=HEADERS, timeout=5)
+        if response.status_code < 400:
+            return True
+        else:
+            response = requests.get(url, headers=HEADERS, timeout=5, stream=True)
+            return response.status_code < 400
+    except:
+        return False
 
 @app.route("/")
 def index():
-    resultados = []
-    for s in SERVIDORES:
-        try:
-            response = requests.head(s["url"], timeout=10, allow_redirects=True)
-            status_code = response.status_code
-            status = "🟢" if 200 <= status_code < 400 else "🔴"
-        except Exception as e:
-            status = "🔴"
-        resultados.append({
-            "nome": s["nome"],
-            "grupo": s["grupo"],
-            "url": s["url"],
-            "status": status
+    status = []
+    for grupo, nome, url in SERVIDORES:
+        online = verificar_status(url)
+        status.append({
+            "grupo": grupo,
+            "nome": nome,
+            "status": "🟢" if online else "🔴"
         })
 
-    html = '''
-    <html><head><title>Status DNS</title></head><body>
-    <h2>🧪 Todos os Servidores DNS</h2>
-    <table border="1" cellpadding="8"><tr><th>Servidor</th><th>Grupo</th><th>Status</th></tr>
-    {% for r in resultados %}
-    <tr><td>{{ r.nome }}</td><td>{{ r.grupo }}</td><td>{{ r.status }}</td></tr>
-    {% endfor %}
-    </table></body></html>
-    '''
-    return render_template_string(html, resultados=resultados)
+    html = """
+    <html>
+    <head>
+        <title>Todos os Servidores DNS</title>
+    </head>
+    <body style="background:#fff;font-family:Arial">
+        <h2>🔍 Todos os Servidores DNS</h2>
+        <table border="1" cellspacing="0" cellpadding="5">
+            <tr><th>Servidor</th><th>Grupo</th><th>Status</th></tr>
+            {% for s in status %}
+            <tr>
+                <td>{{s.nome}}</td>
+                <td>{{s.grupo}}</td>
+                <td style="text-align:center;">{{s.status}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </body>
+    </html>
+    """
+    return render_template_string(html, status=status)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)

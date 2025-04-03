@@ -8,7 +8,42 @@ from flask import Flask, jsonify, send_from_directory
 app = Flask(__name__)
 
 # Grupos de servidores e suas DNS
-servers = {'ZEUS': [{'name': 'Ztcentral', 'url': 'http://ztcentral.top:80'}, {'name': 'AplusHM', 'url': 'http://aplushm.top'}, {'name': 'Strmg', 'url': 'http://strmg.top'}, {'name': 'Newxczs', 'url': 'http://newxczs.top'}], 'CLUB': [{'name': 'AFS4Zer', 'url': 'http://afs4zer.vip:80'}], 'UNIPLAY': [{'name': 'Ztuni', 'url': 'http://ztuni.top:80'}, {'name': 'Testezeiro', 'url': 'http://testezeiro.com:80'}], 'POWERPLAY': [{'name': 'Techon', 'url': 'http://techon.one:80'}], 'P2CINE': [{'name': 'Tuptu1', 'url': 'https://tuptu1.live'}, {'name': 'Tyuo22', 'url': 'https://tyuo22.club'}, {'name': 'AB22', 'url': 'https://ab22.store'}], 'LIVE21': [{'name': 'Tojole', 'url': 'http://tojole.net:80'}], 'BXPLAY': [{'name': 'BXPLux', 'url': 'http://bxplux.top:80'}], 'ELITE': [{'name': 'BandNews', 'url': 'http://bandnews.asia:80'}], 'BLAZE': [{'name': 'CDN Trek', 'url': 'http://cdntrek.xyz:80'}, {'name': 'Natkcz', 'url': 'http://natkcz.xyz:80'}]}
+servers = {
+    "ZEUS": [
+        {"name": "Ztcentral", "url": "http://ztcentral.top:80"},
+        {"name": "AplusHM", "url": "http://aplushm.top"},
+        {"name": "Strmg", "url": "http://strmg.top"},
+        {"name": "Newxczs", "url": "http://newxczs.top"}
+    ],
+    "CLUB": [
+        {"name": "AFS4Zer", "url": "http://afs4zer.vip:80"}
+    ],
+    "UNIPLAY": [
+        {"name": "Ztuni", "url": "http://ztuni.top:80"},
+        {"name": "Testezeiro", "url": "http://testezeiro.com:80"}
+    ],
+    "POWERPLAY": [
+        {"name": "Techon", "url": "http://techon.one:80"}
+    ],
+    "P2CINE": [
+        {"name": "Tuptu1", "url": "https://tuptu1.live"},
+        {"name": "Tyuo22", "url": "https://tyuo22.club"},
+        {"name": "AB22", "url": "https://ab22.store"}
+    ],
+    "LIVE21": [
+        {"name": "Tojole", "url": "http://tojole.net:80"}
+    ],
+    "BXPLAY": [
+        {"name": "BXPLux", "url": "http://bxplux.top:80"}
+    ],
+    "ELITE": [
+        {"name": "BandNews", "url": "http://bandnews.asia:80"}
+    ],
+    "BLAZE": [
+        {"name": "CDN Trek", "url": "http://cdntrek.xyz:80"},
+        {"name": "Natkcz", "url": "http://natkcz.xyz:80"}
+    ]
+}
 
 status_data = {}
 for group, dns_list in servers.items():

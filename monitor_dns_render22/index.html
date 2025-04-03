@@ -5,29 +5,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Monitor de DNS</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f4f9fc; padding: 20px; }
-    h1 { color: #0d6efd; }
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+    h1 { color: #2c3e50; }
     .description { margin-bottom: 20px; color: #555; }
-    .group-title { margin-top: 40px; font-size: 1.5em; color: #0d6efd; }
-    .ranking-box { background: #fff; padding: 20px; margin-bottom: 30px; border-left: 5px solid #0d6efd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .ranking-box h2 { margin: 0 0 10px 0; color: #0d6efd; }
-    .status-online { color: green; font-weight: bold; }
-    .status-offline { color: red; font-weight: bold; }
-    .status-desconhecido { color: gray; font-weight: bold; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background-color: #fff; }
-    th, td { padding: 12px; border-bottom: 1px solid #ccc; }
-    th { background-color: #0d6efd; color: white; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #2c3e50; color: white; }
+    .online { color: green; font-weight: bold; }
+    .offline { color: red; font-weight: bold; }
+    .group-title { margin-top: 40px; font-size: 1.5em; color: #34495e; }
+    .ranking-box { background: #fff; padding: 15px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .ranking-box h2 { margin: 0 0 10px 0; color: #2c3e50; }
+    .ranking-box ol { padding-left: 20px; }
   </style>
 </head>
 <body>
-  <h1>📡 Monitor de DNS</h1>
-  <p class="description">Monitoramento em tempo real por grupo de servidores com visual moderno.</p>
+  <h1>Monitor de DNS</h1>
+  <p class="description">Monitoramento por grupo de servidores com status em tempo real.</p>
 
   <div class="ranking-box">
     <h2>🏆 Top 5 Servidores com Maior Uptime</h2>
-    <ol id="top-ranking"><li>Carregando...</li></ol>
+    <ol id="top-ranking">
+      <li>Carregando...</li>
+    </ol>
   </div>
 
   <div id="dns-content">Carregando dados...</div>
@@ -38,14 +39,16 @@
         const response = await fetch("/api/status");
         const { status, top5 } = await response.json();
 
+        // Atualizar o ranking top 5
         const topContainer = document.getElementById("top-ranking");
         topContainer.innerHTML = "";
         top5.forEach((entry, i) => {
           const li = document.createElement("li");
-          li.innerHTML = `<strong>${entry.name}</strong> <span class="badge text-bg-primary ms-2">${entry.group}</span> - ${entry.uptime}%`;
+          li.textContent = `${entry.name} [${entry.group}] - ${entry.uptime}%`;
           topContainer.appendChild(li);
         });
 
+        // Atualizar as tabelas de grupos
         const container = document.getElementById("dns-content");
         container.innerHTML = "";
         for (const [grupo, servidores] of Object.entries(status)) {
@@ -61,8 +64,7 @@
                 <th>Nome da DNS</th>
                 <th>Endereço</th>
                 <th>Status</th>
-                <th>Uptime (%)</th>
-                <th>Uptime (horas)</th>
+                <th>Uptime</th>
                 <th>Falhas</th>
                 <th>Última Verificação</th>
               </tr>
@@ -72,9 +74,8 @@
                 <tr>
                   <td>${nome}</td>
                   <td>${info.url}</td>
-                  <td class="status-${info.status.toLowerCase()}">${info.status}</td>
+                  <td class="${info.status === 'Online' ? 'online' : 'offline'}">${info.status}</td>
                   <td>${info.uptime}%</td>
-                  <td>${Math.floor(info.uptime_seconds / 3600)}h</td>
                   <td>${info.failures}</td>
                   <td>${info.last_check}</td>
                 </tr>

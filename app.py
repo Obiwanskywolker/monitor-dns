@@ -1,7 +1,8 @@
 from flask import Flask, render_template
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
+import threading
 import time
 
 app = Flask(__name__)
@@ -26,8 +27,9 @@ servers = [
     {"name": "Natkcz", "url": "natkcz.xyz", "group": "BLAZE"},
 ]
 
-# Portas comuns usadas por servidores IPTV
-PORTAS = [80, 81, 443, 8080]
+PORTAS = [80, 8080]
+status_cache = {}
+lock = threading.Lock()
 
 
 def check_status(server):
@@ -48,19 +50,50 @@ def check_status(server):
     return False
 
 
+def update_statuses():
+    while True:
+        with lock:
+            now = datetime.utcnow()
+            for s in servers:
+                name = s["name"]
+                was_online = status_cache.get(name, {}).get("status", False)
+                uptime_start = status_cache.get(name, {}).get("uptime_start")
+
+                is_online = check_status(s)
+
+                if is_online:
+                    if not was_online:
+                        uptime_start = now
+                    elapsed = (now - uptime_start).total_seconds() / 3600 if uptime_start else 0
+                else:
+                    uptime_start = None
+                    elapsed = 0
+
+                status_cache[name] = {
+                    "status": is_online,
+                    "uptime_start": uptime_start,
+                    "uptime_hours": round(elapsed, 2)
+                }
+
+        time.sleep(300)  # Atualiza a cada 5 minutos
+
+
 @app.route('/')
 def home():
-    result = []
-    for s in servers:
-        status = check_status(s)
-        result.append({
-            "name": s["name"],
-            "group": s["group"],
-            "status": status
-        })
-        time.sleep(0.2)  # Reduz o uso de memória e evita sobrecarga
+    with lock:
+        result = []
+        for s in servers:
+            cache = status_cache.get(s["name"], {})
+            result.append({
+                "name": s["name"],
+                "group": s["group"],
+                "status": cache.get("status", False),
+                "uptime_hours": cache.get("uptime_hours", 0.0)
+            })
     return render_template("status.html", servidores=result)
 
 
 if __name__ == '__main__':
+    t = threading.Thread(target=update_statuses, daemon=True)
+    t.start()
     app.run(debug=True, port=5000)

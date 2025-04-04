@@ -1,7 +1,6 @@
 from flask import Flask, render_template
-import requests
+import socket
 from datetime import datetime, timedelta
-from urllib.parse import urlparse
 import threading
 import time
 
@@ -31,24 +30,18 @@ PORTAS = [80, 8080]
 status_cache = {}
 lock = threading.Lock()
 
+def check_socket_status(host, port, timeout=5):
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
 
 def check_status(server):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "*/*",
-        "Connection": "keep-alive"
-    }
     for port in PORTAS:
-        try:
-            protocol = "https" if port == 443 else "http"
-            url = f"{protocol}://{server['url']}:{port}"
-            response = requests.get(url, headers=headers, timeout=2)
-            if response.status_code == 200:
-                return True
-        except:
-            continue
+        if check_socket_status(server['url'], port):
+            return True
     return False
-
 
 def update_statuses():
     while True:
@@ -77,7 +70,6 @@ def update_statuses():
 
         time.sleep(300)  # Atualiza a cada 5 minutos
 
-
 @app.route('/')
 def home():
     with lock:
@@ -91,7 +83,6 @@ def home():
                 "uptime_hours": cache.get("uptime_hours", 0.0)
             })
     return render_template("status.html", servidores=result)
-
 
 if __name__ == '__main__':
     t = threading.Thread(target=update_statuses, daemon=True)

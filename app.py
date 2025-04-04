@@ -1,8 +1,8 @@
-
 from flask import Flask, render_template
 import requests
 from datetime import datetime
 from urllib.parse import urlparse
+import time
 
 app = Flask(__name__)
 
@@ -40,7 +40,7 @@ def check_status(server):
         try:
             protocol = "https" if port == 443 else "http"
             url = f"{protocol}://{server['url']}:{port}"
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=2)
             if response.status_code == 200:
                 return True
         except:
@@ -58,6 +58,7 @@ def home():
             "group": s["group"],
             "status": status
         })
+        time.sleep(0.2)  # Reduz o uso de memória e evita sobrecarga
     return render_template("status.html", servidores=result)
 
 

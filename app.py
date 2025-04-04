@@ -1,5 +1,5 @@
 from flask import Flask, render_template
-import socket
+import http.client
 from datetime import datetime, timedelta
 import threading
 import time
@@ -30,17 +30,16 @@ PORTAS = [80, 8080]
 status_cache = {}
 lock = threading.Lock()
 
-def check_socket_status(host, port, timeout=5):
-    try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except Exception:
-        return False
-
-def check_status(server):
+def check_http_status(host):
     for port in PORTAS:
-        if check_socket_status(server['url'], port):
-            return True
+        try:
+            conn = http.client.HTTPConnection(host, port=port, timeout=4)
+            conn.request("HEAD", "/")
+            response = conn.getresponse()
+            if response.status < 500:
+                return True
+        except Exception:
+            continue
     return False
 
 def update_statuses():
@@ -52,7 +51,7 @@ def update_statuses():
                 was_online = status_cache.get(name, {}).get("status", False)
                 uptime_start = status_cache.get(name, {}).get("uptime_start")
 
-                is_online = check_status(s)
+                is_online = check_http_status(s["url"])
 
                 if is_online:
                     if not was_online:

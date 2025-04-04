@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Status dos Servidores DNS</title>
+</head>
+<body>
+    <h1>Todos os Servidores DNS</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Servidor</th>
+                <th>Grupo</th>
+                <th>Status</th>
+                <th>Uptime (horas)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in servidores %}
+            <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.group }}</td>
+                <td style="text-align: center;">
+                    {% if s.status %}
+                        🟢
+                    {% else %}
+                        🔴
+                    {% endif %}
+                </td>
+                <td>{{ "%.2f"|format(s.uptime_hours) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

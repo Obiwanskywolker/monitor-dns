@@ -4,72 +4,66 @@ import requests
 
 app = Flask(__name__)
 
-SERVIDORES = [
-    ("ZEUS", "Ztcentral", "http://ztcentral.top:80"),
-    ("ZEUS", "AplusHM", "http://aplushm.top"),
-    ("ZEUS", "Strmg", "http://strmg.top"),
-    ("ZEUS", "Newxczs", "http://newxczs.top"),
-    ("CLUB", "AFS4Zer", "http://afs4zer.vip:80"),
-    ("UNIPLAY", "Ztuni", "http://ztuni.top:80"),
-    ("UNIPLAY", "Testezeiro", "http://testezeiro.com:80"),
-    ("POWERPLAY", "Techon", "http://techon.one:80"),
-    ("P2CINE", "Tuptu1", "https://tuptu1.live"),
-    ("P2CINE", "Tyuo22", "https://tyuo22.club"),
-    ("P2CINE", "AB22", "https://ab22.store"),
-    ("LIVE21", "Tojole", "http://tojole.net:80"),
-    ("BXPLAY", "BXPLux", "http://bxplux.top:80"),
-    ("ELITE", "BandNews", "http://bandnews.asia:80"),
-    ("BLAZE", "CDN Trek", "http://cdntrek.xyz:80"),
-    ("BLAZE", "Natkcz", "http://natkcz.xyz:80"),
-]
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+# Lista de servidores e seus grupos
+servidores = {
+    "Ztcentral": ("ZEUS", "http://ztcentral.top:80"),
+    "AplusHM": ("ZEUS", "http://aplushm.top"),
+    "Strmg": ("ZEUS", "http://strmg.top"),
+    "Newxczs": ("ZEUS", "http://newxczs.top"),
+    "AFS4Zer": ("CLUB", "http://afs4zer.vip:80"),
+    "Ztuni": ("UNIPLAY", "http://ztuni.top:80"),
+    "Testezeiro": ("UNIPLAY", "http://testezeiro.com:80"),
+    "Techon": ("POWERPLAY", "http://techon.one:80"),
+    "Tuptu1": ("P2CINE", "https://tuptu1.live"),
+    "Tyuo22": ("P2CINE", "https://tyuo22.club"),
+    "AB22": ("P2CINE", "https://ab22.store"),
+    "Tojole": ("LIVE21", "http://tojole.net:80"),
+    "BXPLux": ("BXPLAY", "http://bxplux.top:80"),
+    "BandNews": ("ELITE", "http://bandnews.asia:80"),
+    "CDN Trek": ("BLAZE", "http://cdntrek.xyz:80"),
+    "Natkcz": ("BLAZE", "http://natkcz.xyz:80")
 }
 
-def verificar_status(url):
+def check_status(url):
     try:
-        response = requests.head(url, headers=HEADERS, timeout=5)
-        if response.status_code < 400:
-            return True
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+        if 200 <= response.status_code < 400:
+            return "🟢"
         else:
-            response = requests.get(url, headers=HEADERS, timeout=5, stream=True)
-            return response.status_code < 400
+            return "🔴"
     except:
-        return False
+        return "🔴"
 
 @app.route("/")
 def index():
-    status = []
-    for grupo, nome, url in SERVIDORES:
-        online = verificar_status(url)
-        status.append({
-            "grupo": grupo,
-            "nome": nome,
-            "status": "🟢" if online else "🔴"
-        })
+    status_servidores = []
+    for nome, (grupo, url) in servidores.items():
+        status = check_status(url)
+        status_servidores.append((nome, grupo, status))
 
     html = """
-    <html>
-    <head>
-        <title>Todos os Servidores DNS</title>
-    </head>
-    <body style="background:#fff;font-family:Arial">
-        <h2>🔍 Todos os Servidores DNS</h2>
-        <table border="1" cellspacing="0" cellpadding="5">
-            <tr><th>Servidor</th><th>Grupo</th><th>Status</th></tr>
-            {% for s in status %}
-            <tr>
-                <td>{{s.nome}}</td>
-                <td>{{s.grupo}}</td>
-                <td style="text-align:center;">{{s.status}}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    </body>
-    </html>
+    <html><head><meta charset='utf-8'>
+    <style>
+        body { font-family: Arial; background: #fff; padding: 20px; }
+        h2 { color: #333; }
+        table { width: 300px; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        th { background: #f0f0f0; }
+    </style>
+    </head><body>
+    <h2>🔍 Todos os Servidores DNS</h2>
+    <table>
+        <tr><th>Servidor</th><th>Grupo</th><th>Status</th></tr>
+        {% for s in servidores %}
+            <tr><td>{{s[0]}}</td><td>{{s[1]}}</td><td>{{s[2]}}</td></tr>
+        {% endfor %}
+    </table>
+    </body></html>
     """
-    return render_template_string(html, status=status)
+    return render_template_string(html, servidores=status_servidores)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)

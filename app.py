@@ -36,41 +36,43 @@ def check_http_status(host):
             conn = http.client.HTTPConnection(host, port=port, timeout=4)
             conn.request("HEAD", "/")
             response = conn.getresponse()
-            # Considera online se qualquer resposta for recebida
-            return True
+            if response.status:  # Qualquer status é considerado resposta válida
+                return True
         except Exception:
             continue
     return False
 
 def update_statuses():
-    while True:
-        with lock:
-            now = datetime.utcnow()
-            for s in servers:
-                name = s["name"]
-                was_online = status_cache.get(name, {}).get("status", False)
-                uptime_start = status_cache.get(name, {}).get("uptime_start")
+    with lock:
+        now = datetime.utcnow()
+        for s in servers:
+            name = s["name"]
+            was_online = status_cache.get(name, {}).get("status", False)
+            uptime_start = status_cache.get(name, {}).get("uptime_start")
 
-                is_online = check_http_status(s["url"])
+            is_online = check_http_status(s["url"])
 
-                if is_online:
-                    if not was_online:
-                        uptime_start = now
-                    elapsed = (now - uptime_start).total_seconds() / 3600 if uptime_start else 0
-                else:
-                    uptime_start = None
-                    elapsed = 0
+            if is_online:
+                if not was_online:
+                    uptime_start = now
+                elapsed = (now - uptime_start).total_seconds() / 3600 if uptime_start else 0
+            else:
+                uptime_start = None
+                elapsed = 0
 
-                status_cache[name] = {
-                    "status": is_online,
-                    "uptime_start": uptime_start,
-                    "uptime_hours": round(elapsed, 2)
-                }
+            status_cache[name] = {
+                "status": is_online,
+                "uptime_start": uptime_start,
+                "uptime_hours": round(elapsed, 2)
+            }
 
-        time.sleep(300)  # Atualiza a cada 5 minutos
+def update_now():
+    t = threading.Thread(target=update_statuses)
+    t.start()
 
 @app.route('/')
 def home():
+    update_now()  # Força atualização imediata ao carregar a página
     with lock:
         result = []
         for s in servers:
@@ -84,6 +86,7 @@ def home():
     return render_template("status.html", servidores=result)
 
 if __name__ == '__main__':
-    t = threading.Thread(target=update_statuses, daemon=True)
+    # Start thread que roda em background a cada 5 minutos
+    t = threading.Thread(target=lambda: [update_statuses() or time.sleep(300) for _ in iter(int, 1)], daemon=True)
     t.start()
     app.run(debug=True, port=5000)

@@ -36,8 +36,8 @@ def check_http_status(host):
             conn = http.client.HTTPConnection(host, port=port, timeout=4)
             conn.request("HEAD", "/")
             response = conn.getresponse()
-            if response.status < 500:
-                return True
+            # Considera online se qualquer resposta for recebida
+            return True
         except Exception:
             continue
     return False
